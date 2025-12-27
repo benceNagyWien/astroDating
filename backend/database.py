@@ -12,7 +12,7 @@ from backend.models import ZodiacSign
 DATABASE_URL = "sqlite:///./astrodate.db"
 
 # Erstelle die SQLAlchemy Engine
-engine = create_engine(DATABASE_URL, echo=True, connect_args={"check_same_thread": False})
+engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
 
 def create_db_and_tables():
     """
