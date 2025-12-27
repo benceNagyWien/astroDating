@@ -1,11 +1,22 @@
 from typing import Optional
-from datetime import datetime
+from datetime import datetime, date
 from sqlmodel import Field, SQLModel
 
 # ======================================================================================
-# NOTE: The column names are in English as per the development guidelines.
-# The data stored within, such as 'zodiac_sign', will be in German for the frontend.
+# NOTE: The database schema is now based on the Western (Tropical) Zodiac.
 # ======================================================================================
+
+class ZodiacSign(SQLModel, table=True):
+    """
+    Represents one of the 12 Western Zodiac signs with its date range.
+    """
+    id: Optional[int] = Field(default=None, primary_key=True)
+    english_name: str = Field(index=True, unique=True)
+    german_name: str = Field(unique=True)
+    start_month: int
+    start_day: int
+    end_month: int
+    end_day: int
 
 class User(SQLModel, table=True):
     """
@@ -14,14 +25,18 @@ class User(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     username: str = Field(index=True, unique=True, nullable=False)
     hashed_password: str = Field(nullable=False)
-    birth_year: int = Field(index=True, nullable=False)
-    zodiac_sign: str = Field(index=True) # Will store the German name of the sign
+    birth_date: date = Field(index=True, nullable=False)
     bio: Optional[str] = None
+    
+    # Foreign key relationship to the ZodiacSign table.
+    # This will be calculated by the backend after user registration.
+    zodiac_sign_id: Optional[int] = Field(default=None, foreign_key="zodiacsign.id")
+
 
 class ZodiacCompatibility(SQLModel, table=True):
     """
     A static lookup table defining which zodiac signs are compatible.
-    e.g., sign_1: 'Rat', sign_2: 'Dragon'
+    e.g., sign_1: 'Aries', sign_2: 'Leo'
     """
     id: Optional[int] = Field(default=None, primary_key=True)
     sign_1: str = Field(index=True, nullable=False)
@@ -42,4 +57,5 @@ class Match(SQLModel, table=True):
     
     is_like: bool = Field(nullable=False)
     created_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
+
 
