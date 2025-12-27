@@ -1,6 +1,11 @@
 from sqlmodel import create_engine, Session, SQLModel
 from typing import Generator
 
+# Wichtig: Importiere die Modelle, damit SQLModel sie "sieht",
+# bevor `create_all` aufgerufen wird.
+from backend import models
+
+
 # NOTE: Comments are in German as per DEVELOPMENT_GUIDELINES.md
 
 # Die SQLite Datenbank-URL
