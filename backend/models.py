@@ -4,8 +4,17 @@ from sqlmodel import Field, SQLModel
 
 # ======================================================================================
 # NOTE: The column names are in English as per the development guidelines.
-# The data stored within, such as 'zodiac_sign', will be in German for the frontend.
+# The data stored within, such as 'german_name', will be in German for the frontend.
 # ======================================================================================
+
+class ZodiacSign(SQLModel, table=True):
+    """
+    Represents one of the 12 Chinese Zodiac signs.
+    The ID corresponds to the result of `year % 12`.
+    """
+    id: int = Field(primary_key=True)
+    english_name: str = Field(index=True, unique=True)
+    german_name: str = Field(unique=True)
 
 class User(SQLModel, table=True):
     """
@@ -15,12 +24,15 @@ class User(SQLModel, table=True):
     username: str = Field(index=True, unique=True, nullable=False)
     hashed_password: str = Field(nullable=False)
     birth_year: int = Field(index=True, nullable=False)
-    zodiac_sign: str = Field(index=True) # Will store the German name of the sign
     bio: Optional[str] = None
+    
+    # Foreign key relationship to the ZodiacSign table
+    zodiac_sign_id: Optional[int] = Field(default=None, foreign_key="zodiacsign.id")
+
 
 class ZodiacCompatibility(SQLModel, table=True):
     """
-    A static lookup table defining which zodiac signs are compatible.
+a `zodiac_sign` szöveges mezőt lecserélem egy `zodiac_sign_id` numerikus hivatkozásra, ami sokkal szakszerűbb megoldás.    A static lookup table defining which zodiac signs are compatible.
     e.g., sign_1: 'Rat', sign_2: 'Dragon'
     """
     id: Optional[int] = Field(default=None, primary_key=True)
@@ -42,4 +54,5 @@ class Match(SQLModel, table=True):
     
     is_like: bool = Field(nullable=False)
     created_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
+
 
