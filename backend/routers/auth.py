@@ -1,12 +1,14 @@
 from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.security import OAuth2PasswordRequestForm
 from sqlmodel import Session
+from datetime import timedelta
 
 from backend.database import get_session
-from backend.models import UserCreate, UserRead
+from backend.models import UserCreate, UserRead, Token
 from backend.crud import get_user_by_email, create_user
+from backend.security import verify_password, create_access_token, ACCESS_TOKEN_EXPIRE_MINUTES
 
 # English comments are used in the code as requested.
-# This router will handle authentication-related endpoints like login, logout, and register.
 router = APIRouter(
     prefix="/auth",
     tags=["Authentication"],
@@ -17,7 +19,6 @@ def register_new_user(*, session: Session = Depends(get_session), user_in: UserC
     """
     Create a new user.
     """
-    # Check if a user with this email already exists
     user = get_user_by_email(db=session, email=user_in.email)
     if user:
         raise HTTPException(
@@ -25,6 +26,37 @@ def register_new_user(*, session: Session = Depends(get_session), user_in: UserC
             detail="A user with this email already exists in the system.",
         )
     
-    # Create the new user in the database
     new_user = create_user(db=session, user=user_in)
     return new_user
+
+@router.post("/login", response_model=Token)
+def login_for_access_token(
+    *,
+    session: Session = Depends(get_session),
+    form_data: OAuth2PasswordRequestForm = Depends()
+):
+    """
+    OAuth2 compatible token login, get an access token for future requests.
+    """
+    user = get_user_by_email(db=session, email=form_data.username) # OAuth2 form uses 'username' field for email
+    if not user or not verify_password(form_data.password, user.hashed_password):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect email or password",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    
+    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token = create_access_token(
+        data={"sub": user.email}, expires_delta=access_token_expires
+    )
+    
+    return {"access_token": access_token, "token_type": "bearer"}
+
+@router.post("/logout")
+def logout():
+    """
+    Placeholder for logout. In a stateless token-based auth,
+    the client just needs to delete the token.
+    """
+    return {"message": "Logout successful. Please delete your token."}

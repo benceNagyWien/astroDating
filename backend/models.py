@@ -74,4 +74,13 @@ class Match(SQLModel, table=True):
     is_like: bool = Field(nullable=False)
     created_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
 
+# Schema for the login response
+class Token(SQLModel):
+    access_token: str
+    token_type: str
+
+# Schema for the data encoded in the JWT
+class TokenData(SQLModel):
+    email: str | None = None
+
 
