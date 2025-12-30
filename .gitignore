@@ -61,6 +61,7 @@ app.db
 /frontend/dist
 /frontend/.next
 /frontend/.svelte-kit
+/frontend/.vite/
 /frontend/coverage
 /frontend/.env
 /frontend/.env.local
