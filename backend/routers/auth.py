@@ -3,10 +3,10 @@ from fastapi.security import OAuth2PasswordRequestForm
 from sqlmodel import Session
 from datetime import timedelta
 
-from database import get_session
-from models import UserCreate, UserRead, Token
-from crud import get_user_by_email, create_user
-from security import verify_password, create_access_token, ACCESS_TOKEN_EXPIRE_MINUTES
+from ..database import get_session
+from ..models import UserCreate, UserRead, Token
+from ..crud import get_user_by_email, create_user
+from ..security import verify_password, create_access_token, ACCESS_TOKEN_EXPIRE_MINUTES
 
 # English comments are used in the code as requested.
 router = APIRouter(
