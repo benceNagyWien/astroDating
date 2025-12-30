@@ -1,42 +1,65 @@
-from typing import Optional
-from datetime import datetime, date
-from sqlmodel import Field, SQLModel
+from typing import Optional, List
+from datetime import datetime
+from sqlmodel import Field, SQLModel, Relationship
 
 # ======================================================================================
-# NOTE: The database schema is now based on the Western (Tropical) Zodiac.
+# NOTE: The database schema is now based on the Chinese Zodiac.
+# The column names are in English as per the development guidelines.
+# The data stored within, such as 'german_name', will be in German for the frontend.
 # ======================================================================================
+
+# Schema for the login response
+class Token(SQLModel):
+    access_token: str
+    token_type: str
+
+# Schema for the data encoded in the JWT
+class TokenData(SQLModel):
+    username: str | None = None
 
 class ZodiacSign(SQLModel, table=True):
     """
-    Represents one of the 12 Western Zodiac signs with its date range.
+    Represents one of the 12 Chinese Zodiac signs.
+    The ID corresponds to the result of `year % 12`.
     """
-    id: Optional[int] = Field(default=None, primary_key=True)
+    id: int = Field(primary_key=True)
     english_name: str = Field(index=True, unique=True)
     german_name: str = Field(unique=True)
-    start_month: int
-    start_day: int
-    end_month: int
-    end_day: int
+    
+    users: List["User"] = Relationship(back_populates="zodiac_sign")
 
-class User(SQLModel, table=True):
+# Shared properties for a user
+class UserBase(SQLModel):
+    username: str = Field(unique=True, index=True)
+    birth_year: int = Field(index=True)
+    bio: Optional[str] = None
+
+# Properties to receive via API on creation
+class UserCreate(UserBase):
+    password: str
+
+# Properties to return via API, without the password
+class UserRead(UserBase):
+    id: int
+    zodiac_sign_id: Optional[int] = None
+
+# Database model for the User
+class User(UserBase, table=True):
     """
     Represents a user in the database.
     """
     id: Optional[int] = Field(default=None, primary_key=True)
-    username: str = Field(index=True, unique=True, nullable=False)
-    hashed_password: str = Field(nullable=False)
-    birth_date: date = Field(index=True, nullable=False)
-    bio: Optional[str] = None
+    hashed_password: str
     
     # Foreign key relationship to the ZodiacSign table.
     # This will be calculated by the backend after user registration.
     zodiac_sign_id: Optional[int] = Field(default=None, foreign_key="zodiacsign.id")
-
+    zodiac_sign: Optional[ZodiacSign] = Relationship(back_populates="users")
 
 class ZodiacCompatibility(SQLModel, table=True):
     """
-    A static lookup table defining which zodiac signs are compatible.
-    e.g., sign_1: 'Aries', sign_2: 'Leo'
+    a `zodiac_sign` szöveges mezőt lecserélem egy `zodiac_sign_id` numerikus hivatkozásra, ami sokkal szakszerűbb megoldás.    A static lookup table defining which zodiac signs are compatible.
+    e.g., sign_1: 'Rat', sign_2: 'Dragon'
     """
     id: Optional[int] = Field(default=None, primary_key=True)
     sign_1: str = Field(index=True, nullable=False)
@@ -57,5 +80,3 @@ class Match(SQLModel, table=True):
     
     is_like: bool = Field(nullable=False)
     created_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
-
-
