@@ -1,10 +1,25 @@
 from typing import Optional
 from datetime import datetime, date
-from sqlmodel import Field, SQLModel
+from sqlmodel import Field, SQLModel, Relationship
 
 # ======================================================================================
 # NOTE: The database schema is now based on the Western (Tropical) Zodiac.
 # ======================================================================================
+
+# Shared properties for a user
+class UserBase(SQLModel):
+    email: str = Field(unique=True, index=True)
+    birth_date: date
+    bio: Optional[str] = None
+
+# Properties to receive via API on creation
+class UserCreate(UserBase):
+    password: str
+
+# Properties to return via API, without the password
+class UserRead(UserBase):
+    id: int
+    zodiac_sign_id: Optional[int] = None
 
 class ZodiacSign(SQLModel, table=True):
     """
@@ -17,24 +32,26 @@ class ZodiacSign(SQLModel, table=True):
     start_day: int
     end_month: int
     end_day: int
+    
+    users: list["User"] = Relationship(back_populates="zodiac_sign")
 
-class User(SQLModel, table=True):
+# Database model for the User
+class User(UserBase, table=True):
     """
     Represents a user in the database.
     """
     id: Optional[int] = Field(default=None, primary_key=True)
     username: str = Field(index=True, unique=True, nullable=False)
-    hashed_password: str = Field(nullable=False)
-    birth_date: date = Field(index=True, nullable=False)
-    bio: Optional[str] = None
+    hashed_password: str
     
     # Foreign key relationship to the ZodiacSign table.
     # This will be calculated by the backend after user registration.
     zodiac_sign_id: Optional[int] = Field(default=None, foreign_key="zodiacsign.id")
-
+    zodiac_sign: Optional[ZodiacSign] = Relationship(back_populates="users")
 
 class ZodiacCompatibility(SQLModel, table=True):
     """
+
     A static lookup table defining which zodiac signs are compatible.
     e.g., sign_1: 'Aries', sign_2: 'Leo'
     """
@@ -58,4 +75,11 @@ class Match(SQLModel, table=True):
     is_like: bool = Field(nullable=False)
     created_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
 
+# Schema for the login response
+class Token(SQLModel):
+    access_token: str
+    token_type: str
 
+# Schema for the data encoded in the JWT
+class TokenData(SQLModel):
+    email: str | None = None
