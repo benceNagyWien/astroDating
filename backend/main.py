@@ -2,8 +2,8 @@ from fastapi import FastAPI
 from contextlib import asynccontextmanager
 
 # Importiere die Funktionen und Router
-from backend.database import create_db_and_tables, seed_zodiac_signs
-from backend.routers import auth, users
+from database import create_db_and_tables, seed_zodiac_signs
+from routers import auth, users
 
 # NOTE: Comments are in German as per DEVELOPMENT_GUIDELINES.md
 
@@ -33,4 +33,3 @@ def read_root():
     Ein einfacher Endpunkt zur Überprüfung, ob die API läuft.
     """
     return {"message": "Willkommen zur AstroDate API!"}
-

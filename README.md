@@ -1,35 +1,40 @@
-# AstroDate API Backend
+# AstroDate
 
-This is the backend for the AstroDate project, built with FastAPI.
+## Running the Application
 
-## Requirements
+### Backend (FastAPI)
 
-The following Python packages are required to run the server. They can be installed via `pip`.
+1. **Navigate to the backend directory:**
+   ```bash
+   cd astroLokal/backend
+   ```
+2. **Install dependencies (if not already installed):**
+   ```bash
+   pip install fastapi "uvicorn[standard]" sqlmodel faker
+   ```
+3. **Run the development server:**
+   ```bash
+   uvicorn main:app --reload
+   ```
+   The API will be available at `http://localhost:8000`.
 
-- `fastapi`
-- `uvicorn[standard]`
-- `sqlmodel`
-- `faker`
+   **Note:** If port 8000 is already in use, you can specify a different port:
+   ```bash
+   uvicorn main:app --reload --port 8001
+   ```
 
-You can install them all by running the following command inside the activated virtual environment:
-```bash
-pip install fastapi "uvicorn[standard]" sqlmodel faker
-```
+### Frontend (Vue.js)
 
-## Running the Development Server
-
-1.  **Activate the virtual environment:**
-    Make sure you are in the project's root directory.
-    ```bash
-    source backend/venv/bin/activate
-    ```
-    *(On Windows, use: `backend\venv\Scripts\activate`)*
-
-2.  **Start the server:**
-    From the project's root directory, run:
-    ```bash
-    uvicorn backend.main:app --reload
-    ```
-    - The `--reload` flag will automatically restart the server when you make changes to the code.
-    - The API will be available at `http://localhost:8000`.
-    - The interactive API documentation (Swagger UI) will be available at `http://localhost:8000/docs`.
+1. **Navigate to the frontend directory:**
+   ```bash
+   cd astroLokal/frontend
+   ```
+2. **Install dependencies (if not already installed):**
+   ```bash
+   npm install
+   ```
+3. **Run the development server:**
+   ```bash
+   npm run dev
+   ```
+   The frontend will be available at the address specified by Vite (usually `http://localhost:5173`).
