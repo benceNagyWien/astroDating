@@ -33,3 +33,21 @@ pip install fastapi "uvicorn[standard]" sqlmodel faker
     - The `--reload` flag will automatically restart the server when you make changes to the code.
     - The API will be available at `http://localhost:8000`.
     - The interactive API documentation (Swagger UI) will be available at `http://localhost:8000/docs`.
+
+## Database Seeding
+
+The project includes a script to populate the database with realistic test data.
+
+### What it does
+The `seed.py` script uses the `Faker` library to create **100 fake users**. Each user is assigned a random birth date, a short bio, and one of the 100 profile pictures located in `backend/userImages/`.
+
+This is useful for development and testing of the frontend and matching logic.
+
+### How to run
+1. Make sure your virtual environment is activated.
+2. From the project's **root directory**, run the following command:
+    ```bash
+    python -m backend.seed
+    ```
+This will directly execute the script and populate the database.
+
