@@ -2,7 +2,7 @@ from sqlmodel import Session, select
 from datetime import date
 import random
 
-from models import User, UserCreate, ZodiacSign, ZodiacCompatibility
+from models import User, UserCreate, ZodiacSign, ZodiacCompatibility, Match
 from security import get_password_hash
 
 # English comments are used in the code as requested.
@@ -116,3 +116,38 @@ def get_compatible_user(db: Session, current_user_id: int) -> User | None:
     
     # Wähle einen zufälligen Benutzer aus
     return random.choice(compatible_users)
+
+def create_match(db: Session, user_id_from: int, user_id_to: int, is_like: bool) -> Match:
+    """
+    Erstellt einen neuen Match-Eintrag in der Datenbank.
+    """
+    match = Match(
+        user_id_from=user_id_from,
+        user_id_to=user_id_to,
+        is_like=is_like
+    )
+    db.add(match)
+    db.commit()
+    db.refresh(match)
+    return match
+
+def get_users_who_liked_me(db: Session, current_user_id: int) -> list[User]:
+    """
+    Gibt eine Liste von Benutzern zurück, die den aktuellen Benutzer geliked haben.
+    """
+    # Finde alle Matches, wo der aktuelle Benutzer das Ziel ist und is_like=True
+    matches_statement = select(Match).where(
+        Match.user_id_to == current_user_id,
+        Match.is_like == True
+    )
+    matches = db.exec(matches_statement).all()
+    
+    # Sammle die IDs der Benutzer, die den aktuellen Benutzer geliked haben
+    user_ids_who_liked = [match.user_id_from for match in matches]
+    
+    if not user_ids_who_liked:
+        return []
+    
+    # Hole die Benutzer-Objekte
+    users_statement = select(User).where(User.id.in_(user_ids_who_liked))
+    return list(db.exec(users_statement).all())
