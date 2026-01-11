@@ -6,9 +6,9 @@ from faker import Faker
 from sqlmodel import Session
 from datetime import date, timedelta
 
-from database import engine, get_db
-from models import User
-from security import get_password_hash
+from .database import engine, create_db_and_tables, seed_zodiac_signs
+from .models import User
+from .security import get_password_hash
 
 # Initialisiert den Faker-Generator für deutsche Daten
 fake = Faker("de_DE")
@@ -47,6 +47,14 @@ def create_fake_users(db: Session):
     print("Seeding von 100 Benutzern erfolgreich abgeschlossen.")
 
 if __name__ == "__main__":
-    # Erstellt eine Datenbanksitzung und führt das Seeding durch
+    # Erstellt die Datenbank und die Tabellen
+    print("Erstelle Datenbank und Tabellen...")
+    create_db_and_tables()
+    print("Datenbank und Tabellen erfolgreich erstellt.")
+    
+    # Füllt die ZodiacSign-Tabelle mit den Anfangsdaten
+    seed_zodiac_signs()
+
+    # Erstellt eine Datenbanksitzung und führt das User-Seeding durch
     with Session(engine) as session:
         create_fake_users(session)
