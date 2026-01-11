@@ -2,9 +2,9 @@ from fastapi import APIRouter, Depends
 from sqlmodel import Session
 from typing import List
 
-from .. import crud
-from ..database import get_db
-from ..models import UserRead
+import crud
+from database import get_session
+from models import UserRead
 
 
 # English comments are used in the code as requested.
@@ -15,7 +15,7 @@ router = APIRouter(
 )
 
 @router.get("/all", response_model=List[UserRead])
-def read_all_users(db: Session = Depends(get_db), skip: int = 0, limit: int = 100):
+def read_all_users(db: Session = Depends(get_session), skip: int = 0, limit: int = 100):
     """
     Ruft eine Liste aller Benutzer ab.
     Dies ist ein grundlegender Endpunkt, um potenzielle Partner für das Frontend bereitzustellen.

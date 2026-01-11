@@ -4,7 +4,7 @@ from typing import Generator
 # Wichtig: Importiere die Modelle, damit SQLModel sie "sieht",
 # bevor `create_all` aufgerufen wird.
 # noinspection PyUnresolvedReferences
-from .models import User, ZodiacSign, ZodiacCompatibility, Match
+from models import User, ZodiacSign, ZodiacCompatibility, Match
 
 
 # NOTE: Comments are in German as per DEVELOPMENT_GUIDELINES.md

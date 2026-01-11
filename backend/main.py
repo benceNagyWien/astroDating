@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 
 # Importiere die Funktionen und Router
@@ -23,6 +24,20 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan, title="AstroDate API")
 
+# Set up CORS (Cross-Origin Resource Sharing)
+origins = [
+    "http://localhost:5173",  # The origin of our Vue.js frontend
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
 # Binde die Router in die Hauptanwendung ein
 app.include_router(auth.router)
 app.include_router(users.router)
@@ -33,3 +48,4 @@ def read_root():
     Ein einfacher Endpunkt zur Überprüfung, ob die API läuft.
     """
     return {"message": "Willkommen zur AstroDate API!"}
+
