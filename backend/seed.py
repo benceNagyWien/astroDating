@@ -6,9 +6,9 @@ from faker import Faker
 from sqlmodel import Session
 from datetime import date, timedelta
 
-from .database import engine, create_db_and_tables, seed_zodiac_signs
-from .models import User
-from .security import get_password_hash
+from database import engine, create_db_and_tables, seed_zodiac_signs
+from models import User
+from security import get_password_hash
 
 # Initialisiert den Faker-Generator für deutsche Daten
 fake = Faker("de_DE")
