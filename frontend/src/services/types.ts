@@ -16,5 +16,6 @@ export interface UserRead {
   email: string;
   birth_date: string;
   bio: string | null;
+  image_filename: string | null;
   zodiac_sign_id: number | null;
 }
