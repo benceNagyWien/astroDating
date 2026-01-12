@@ -5,7 +5,7 @@ from datetime import timedelta
 
 from database import get_session
 from models import UserCreate, UserRead, Token
-from crud import get_user_by_email, create_user
+from crud import get_user_by_email, create_user # Corrected import
 from security import verify_password, create_access_token, ACCESS_TOKEN_EXPIRE_MINUTES
 
 # English comments are used in the code as requested.
@@ -19,11 +19,11 @@ def register_new_user(*, session: Session = Depends(get_session), user_in: UserC
     """
     Create a new user.
     """
-    user = get_user_by_email(db=session, email=user_in.email)
+    user = get_user_by_email(db=session, email=user_in.email) # Use email for check
     if user:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="A user with this email already exists in the system.",
+            detail="A user with this email already exists in the system.", # Corrected error message
         )
     
     new_user = create_user(db=session, user=user_in)
@@ -37,16 +37,18 @@ def login_for_access_token(
 ):
     """
     OAuth2 compatible token login, get an access token for future requests.
+    The form's 'username' field is used to send the user's email.
     """
-    user = get_user_by_email(db=session, email=form_data.username) # OAuth2 form uses 'username' field for email
+    user = get_user_by_email(db=session, email=form_data.username) # Use email for lookup
     if not user or not verify_password(form_data.password, user.hashed_password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect email or password",
+            detail="Incorrect email or password", # Corrected error message
             headers={"WWW-Authenticate": "Bearer"},
         )
     
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    # The 'sub' of the token should be the user's email
     access_token = create_access_token(
         data={"sub": user.email}, expires_delta=access_token_expires
     )
