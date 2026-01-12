@@ -2,12 +2,13 @@ import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
-from sqlmodel import Session
+from sqlmodel import Session, select
+from models import ZodiacSign
 
 # Importiere die notwendigen Funktionen und Router
 from database import engine, create_db_and_tables, seed_zodiac_signs, seed_zodiac_compatibility
 from routers import auth, users
-from seed import create_fake_users # Importiere die User-Seeding Funktion
+from seed import create_fake_users, create_specific_test_users # Importiere beide Seeding-Funktionen
 
 # NOTE: Comments are in German as per DEVELOPMENT_GUIDELINES.md
 DB_FILE = "./astrodate.db"
@@ -18,9 +19,6 @@ async def lifespan(_app: FastAPI):
     Diese Funktion wird beim Starten der FastAPI Anwendung ausgeführt.
     Bei jedem Start wird die alte Datenbank gelöscht und eine neue,
     mit Testdaten gefüllte Datenbank erstellt.
-    
-    Args:
-        _app: FastAPI Anwendungsinstanz (wird nicht verwendet, aber von FastAPI erwartet)
     """
     print("================ INITIALISIERE ENTWICKLUNGS-DATENBANK ================")
     
@@ -41,7 +39,12 @@ async def lifespan(_app: FastAPI):
     # 4. Test-Benutzerdaten füllen (Seeding)
     print("Fülle Benutzerdaten (Seeding)...")
     with Session(engine) as session:
-        create_fake_users(session)
+        # Lade alle Sternzeichen einmal, um sie an die Seeding-Funktionen zu übergeben (Effizienz)
+        all_zodiac_signs = session.exec(select(ZodiacSign)).all()
+        
+        # Erstelle die Benutzer mit der optimierten Methode
+        create_fake_users(session, all_zodiac_signs)
+        create_specific_test_users(session, all_zodiac_signs)
     
     print("================== DATENBANK-INITIALISIERUNG FERTIG ==================")
     yield
@@ -73,4 +76,3 @@ def read_root():
     Ein einfacher Endpunkt zur Überprüfung, ob die API läuft.
     """
     return {"message": "Willkommen zur AstroDate API!"}
-

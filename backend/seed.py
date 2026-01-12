@@ -1,23 +1,21 @@
 # Deutsche Kommentare gemäß den Entwicklungsrichtlinien.
 
-import os
 import random
 from faker import Faker
-from sqlmodel import Session
-from datetime import date, timedelta
+from sqlmodel import Session, select
+from datetime import date
 
 from database import engine, create_db_and_tables, seed_zodiac_signs, seed_zodiac_compatibility
-from models import User, UserCreate
+from models import User, ZodiacSign
 from security import get_password_hash
-from crud import get_zodiac_sign_by_date, create_user, get_user_by_email
+from crud import determine_zodiac_sign_for_date, get_user_by_email
 
 # Initialisiert den Faker-Generator für deutsche Daten
 fake = Faker("de_DE")
 
-def create_specific_test_users(db: Session):
+def create_specific_test_users(db: Session, all_signs: list[ZodiacSign]):
     """
-    Erstellt 4 vordefinierte, untereinander kompatible Test-Benutzer, falls sie noch nicht existieren.
-    Dies ist nützlich für manuelle Tests und Demonstrationen.
+    Erstellt 4 vordefinierte, untereinander kompatible Test-Benutzer.
     """
     print("\nPrüfe und erstelle 4 spezifische Test-Benutzer...")
 
@@ -29,21 +27,31 @@ def create_specific_test_users(db: Session):
     ]
 
     for user_data in users_data:
-        if not get_user_by_email(db, user_data["email"]):
-            user_create = UserCreate(**user_data)
-            created_user = create_user(db, user_create)
-            sign_name = created_user.zodiac_sign.german_name if created_user.zodiac_sign else 'N/A'
-            print(f"Spezifischer Benutzer erstellt: {created_user.email} ({sign_name})")
-        else:
-            # This case is unlikely with the new auto-delete DB logic, but good practice.
+        if get_user_by_email(db, user_data["email"]):
             print(f"Spezifischer Benutzer {user_data['email']} existiert bereits. Überspringe...")
-    
+            continue
+        
+        zodiac_sign = determine_zodiac_sign_for_date(user_data["birth_date"], all_signs)
+        
+        user = User(
+            email=user_data["email"],
+            hashed_password=get_password_hash(user_data["password"]),
+            birth_date=user_data["birth_date"],
+            bio=user_data["bio"],
+            image_filename=user_data["image_filename"],
+            zodiac_sign=zodiac_sign
+        )
+        db.add(user)
+        sign_name = zodiac_sign.german_name if zodiac_sign else 'N/A'
+        print(f"Spezifischer Benutzer erstellt: {user.email} ({sign_name})")
+
+    db.commit()
     print("Spezifisches Test-Benutzer-Seeding abgeschlossen.")
 
 
-def create_fake_users(db: Session):
+def create_fake_users(db: Session, all_signs: list[ZodiacSign]):
     """
-    Erstellt 100 gefälschte, zufällige Benutzer und fügt sie der Datenbank hinzu.
+    Erstellt 100 gefälschte, zufällige Benutzer.
     """
     print("\nStarte das Seeding von 100 zufälligen Benutzern...")
     
@@ -51,9 +59,9 @@ def create_fake_users(db: Session):
     random.shuffle(image_files)
 
     users_to_create = []
-    for i, image_file in enumerate(image_files):
+    for i, image_file in enumerate(image_files): # Add enumerate to get index for progress
         birth_date = fake.date_between(start_date='-65y', end_date='-18y')
-        zodiac_sign = get_zodiac_sign_by_date(db, birth_date)
+        zodiac_sign = determine_zodiac_sign_for_date(birth_date, all_signs)
         
         user = User(
             email=fake.email(),
@@ -64,9 +72,11 @@ def create_fake_users(db: Session):
             zodiac_sign=zodiac_sign
         )
         users_to_create.append(user)
+        sign_name = zodiac_sign.german_name if zodiac_sign else 'N/A'
+        print(f"Benutzer {i+1}/{len(image_files)} erstellt: {user.email} ({sign_name})") # Progress indicator
 
     db.add_all(users_to_create)
-    db.commit() # Commit all 100 users at once for efficiency
+    db.commit()
     print("Seeding von 100 zufälligen Benutzern erfolgreich abgeschlossen.")
 
 
@@ -80,6 +90,9 @@ if __name__ == "__main__":
     print("Datenbank initialisiert.")
 
     with Session(engine) as session:
+        # Lade alle Sternzeichen einmal, um sie an die Seeding-Funktionen zu übergeben
+        all_zodiac_signs = session.exec(select(ZodiacSign)).all()
+
         print("\nWähle eine Seeding-Methode:")
         print("1: 4 spezifische Test-Benutzer erstellen")
         print("2: 100 zufällige Fake-Benutzer erstellen")
@@ -87,11 +100,11 @@ if __name__ == "__main__":
         choice = input("Auswahl (1, 2, oder 3): ")
         
         if choice == '1':
-            create_specific_test_users(session)
+            create_specific_test_users(session, all_zodiac_signs)
         elif choice == '2':
-            create_fake_users(session)
+            create_fake_users(session, all_zodiac_signs)
         elif choice == '3':
-            create_fake_users(session)
-            create_specific_test_users(session)
+            create_fake_users(session, all_zodiac_signs)
+            create_specific_test_users(session, all_zodiac_signs)
         else:
             print("Ungültige Auswahl.")
