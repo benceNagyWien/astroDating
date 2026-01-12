@@ -1,0 +1,9 @@
+[MASTER]
+init-hook='import sys; sys.path.append(".")'
+
+[MESSAGES CONTROL]
+disable=import-error,no-name-in-module
+
+[TYPECHECK]
+generated-members=*
+
