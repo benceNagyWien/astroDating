@@ -1,5 +1,6 @@
 import os
 from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from sqlmodel import Session, select
@@ -8,7 +9,7 @@ from models import ZodiacSign
 # Importiere die notwendigen Funktionen und Router
 from database import engine, create_db_and_tables, seed_zodiac_signs, seed_zodiac_compatibility
 from routers import auth, users
-from seed import create_fake_users, create_specific_test_users # Importiere beide Seeding-Funktionen
+from seed import create_fake_users, create_specific_test_users
 
 # NOTE: Comments are in German as per DEVELOPMENT_GUIDELINES.md
 DB_FILE = "./astrodate.db"
@@ -39,10 +40,7 @@ async def lifespan(_app: FastAPI):
     # 4. Test-Benutzerdaten füllen (Seeding)
     print("Fülle Benutzerdaten (Seeding)...")
     with Session(engine) as session:
-        # Lade alle Sternzeichen einmal, um sie an die Seeding-Funktionen zu übergeben (Effizienz)
         all_zodiac_signs = session.exec(select(ZodiacSign)).all()
-        
-        # Erstelle die Benutzer mit der optimierten Methode
         create_fake_users(session, all_zodiac_signs)
         create_specific_test_users(session, all_zodiac_signs)
     
@@ -51,6 +49,9 @@ async def lifespan(_app: FastAPI):
     print("Anwendung heruntergefahren.")
 
 app = FastAPI(lifespan=lifespan, title="AstroDate API")
+
+# Mount the directory for serving user images
+app.mount("/userImages", StaticFiles(directory="userImages"), name="userImages")
 
 # Set up CORS (Cross-Origin Resource Sharing)
 origins = [
@@ -64,7 +65,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
 
 # Binde die Router in die Hauptanwendung ein
 app.include_router(auth.router)
