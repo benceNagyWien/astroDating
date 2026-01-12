@@ -1,27 +1,48 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 
 # Importiere die Funktionen und Router
-from database import create_db_and_tables, seed_zodiac_signs
-from routers import auth, users
+# pylint: disable=import-error
+from database import create_db_and_tables, seed_zodiac_signs, seed_zodiac_compatibility  # type: ignore
+from routers import auth, users  # type: ignore
 
 # NOTE: Comments are in German as per DEVELOPMENT_GUIDELINES.md
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):
+async def lifespan(_app: FastAPI):
     """
     Diese Funktion wird beim Starten der FastAPI Anwendung ausgeführt.
     Hier rufen wir die Funktionen zum Erstellen der Datenbanktabellen
     und zum Füllen der statischen Daten auf.
+    
+    Args:
+        _app: FastAPI Anwendungsinstanz (wird nicht verwendet, aber von FastAPI erwartet)
     """
     print("Starte Anwendung und erstelle Datenbanktabellen...")
     create_db_and_tables()
     print("Fülle statische Daten (Tierkreiszeichen)...")
     seed_zodiac_signs()
+    print("Fülle Kompatibilitätsdaten...")
+    seed_zodiac_compatibility()
     yield
     print("Anwendung heruntergefahren.")
 
 app = FastAPI(lifespan=lifespan, title="AstroDate API")
+
+# Set up CORS (Cross-Origin Resource Sharing)
+origins = [
+    "http://localhost:5173",  # The origin of our Vue.js frontend
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 
 # Binde die Router in die Hauptanwendung ein
 app.include_router(auth.router)
@@ -33,3 +54,4 @@ def read_root():
     Ein einfacher Endpunkt zur Überprüfung, ob die API läuft.
     """
     return {"message": "Willkommen zur AstroDate API!"}
+
