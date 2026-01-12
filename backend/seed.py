@@ -7,63 +7,91 @@ from sqlmodel import Session
 from datetime import date, timedelta
 
 from database import engine, create_db_and_tables, seed_zodiac_signs, seed_zodiac_compatibility
-from models import User
+from models import User, UserCreate
 from security import get_password_hash
-from crud import get_zodiac_sign_by_date  # Importiere die neue Logik
+from crud import get_zodiac_sign_by_date, create_user, get_user_by_email
 
 # Initialisiert den Faker-Generator für deutsche Daten
 fake = Faker("de_DE")
 
+def create_specific_test_users(db: Session):
+    """
+    Erstellt 4 vordefinierte, untereinander kompatible Test-Benutzer, falls sie noch nicht existieren.
+    Dies ist nützlich für manuelle Tests und Demonstrationen.
+    """
+    print("\nPrüfe und erstelle 4 spezifische Test-Benutzer...")
+
+    users_data = [
+        {"email": "a@a.a", "password": "a", "birth_date": date(1995, 4, 10), "bio": "Mystischer Astrologe", "image_filename": "user_a.jpg"},
+        {"email": "b@b.b", "password": "b", "birth_date": date(1993, 8, 5), "bio": "Erfahrener Tarot-Leser", "image_filename": "user_b.jpg"},
+        {"email": "c@c.c", "password": "c", "birth_date": date(1990, 12, 10), "bio": "Freundlicher Astrologe", "image_filename": "user_c.jpg"},
+        {"email": "d@d.d", "password": "d", "birth_date": date(1992, 6, 5), "bio": "Mächtiger Astrologe", "image_filename": "user_d.jpg"}
+    ]
+
+    for user_data in users_data:
+        if not get_user_by_email(db, user_data["email"]):
+            user_create = UserCreate(**user_data)
+            created_user = create_user(db, user_create)
+            sign_name = created_user.zodiac_sign.german_name if created_user.zodiac_sign else 'N/A'
+            print(f"Spezifischer Benutzer erstellt: {created_user.email} ({sign_name})")
+        else:
+            # This case is unlikely with the new auto-delete DB logic, but good practice.
+            print(f"Spezifischer Benutzer {user_data['email']} existiert bereits. Überspringe...")
+    
+    print("Spezifisches Test-Benutzer-Seeding abgeschlossen.")
+
+
 def create_fake_users(db: Session):
     """
-    Erstellt 100 gefälschte Benutzer und fügt sie der Datenbank hinzu.
-    Jedem Benutzer wird ein Profilbild aus dem Ordner /userImages/ zugewiesen
-    und das korrekte Sternzeichen basierend auf dem Geburtsdatum zugewiesen.
+    Erstellt 100 gefälschte, zufällige Benutzer und fügt sie der Datenbank hinzu.
     """
-    print("Starte das Seeding von 100 Benutzern...")
+    print("\nStarte das Seeding von 100 zufälligen Benutzern...")
     
-    # Annahme: Es gibt 100 Bilder mit den Namen 1.jpg bis 100.jpg
     image_files = [f"{i}.jpg" for i in range(1, 101)]
     random.shuffle(image_files)
 
+    users_to_create = []
     for i, image_file in enumerate(image_files):
-        # Generiert ein glaubwürdiges Geburtsdatum (18-65 Jahre alt)
-        today = date.today()
-        start_date = today - timedelta(days=65*365)
-        end_date = today - timedelta(days=18*365)
-        birth_date = fake.date_between(start_date=start_date, end_date=end_date)
-        
-        # Ermittelt das korrekte Sternzeichen für das generierte Geburtsdatum
+        birth_date = fake.date_between(start_date='-65y', end_date='-18y')
         zodiac_sign = get_zodiac_sign_by_date(db, birth_date)
         
-        # Erstellt einen neuen Benutzer mit gefälschten Daten
         user = User(
             email=fake.email(),
-            hashed_password=get_password_hash("password123"),  # Standardpasswort für alle
+            hashed_password=get_password_hash("password123"),
             birth_date=birth_date,
             bio=fake.paragraph(nb_sentences=3),
             image_filename=image_file,
-            zodiac_sign=zodiac_sign  # Weise das gefundene Sternzeichen-Objekt zu
+            zodiac_sign=zodiac_sign
         )
-        db.add(user)
-        sign_name = zodiac_sign.german_name if zodiac_sign else "N/A"
-        print(f"Benutzer {i+1}/{len(image_files)} erstellt: {user.email} ({sign_name}) mit Bild {user.image_filename}")
+        users_to_create.append(user)
 
-    db.commit()
-    print("Seeding von 100 Benutzern erfolgreich abgeschlossen.")
+    db.add_all(users_to_create)
+    db.commit() # Commit all 100 users at once for efficiency
+    print("Seeding von 100 zufälligen Benutzern erfolgreich abgeschlossen.")
+
 
 if __name__ == "__main__":
-    # Dieser Block wird nur ausgeführt, wenn das Skript direkt gestartet wird.
     print("Initialisiere die Datenbank und die statischen Daten...")
     create_db_and_tables()
     
-    # Füllt die statischen Tabellen (Sternzeichen und Kompatibilität).
-    # Diese Funktionen erstellen ihre eigene DB-Sitzung.
     seed_zodiac_signs()
     seed_zodiac_compatibility()
     
     print("Datenbank initialisiert.")
 
-    # Erstellt eine neue Datenbanksitzung und führt das User-Seeding durch
     with Session(engine) as session:
-        create_fake_users(session)
+        print("\nWähle eine Seeding-Methode:")
+        print("1: 4 spezifische Test-Benutzer erstellen")
+        print("2: 100 zufällige Fake-Benutzer erstellen")
+        print("3: Alle Benutzer erstellen (100 zufällige + 4 spezifische)")
+        choice = input("Auswahl (1, 2, oder 3): ")
+        
+        if choice == '1':
+            create_specific_test_users(session)
+        elif choice == '2':
+            create_fake_users(session)
+        elif choice == '3':
+            create_fake_users(session)
+            create_specific_test_users(session)
+        else:
+            print("Ungültige Auswahl.")

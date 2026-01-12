@@ -2,10 +2,16 @@
   <div class="p-8">
     <div class="flex justify-between items-center mb-6">
       <h1 class="text-3xl font-bold">AstroDate</h1>
-      <button @click="handleLogout"
-              class="px-4 py-2 font-medium text-white bg-red-600 border border-transparent rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500">
-        Abmelden
-      </button>
+      <div class="flex gap-4">
+        <router-link to="/matches"
+                    class="px-4 py-2 font-medium text-indigo-600 bg-white border border-indigo-600 rounded-md hover:bg-indigo-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+          Matches
+        </router-link>
+        <button @click="handleLogout"
+                class="px-4 py-2 font-medium text-white bg-red-600 border border-transparent rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500">
+          Abmelden
+        </button>
+      </div>
     </div>
 
     <!-- Kompatibler Benutzer Anzeige -->
@@ -39,14 +45,17 @@
         <div class="p-6">
           <h2 class="text-2xl font-bold mb-2">{{ currentUser.email }}</h2>
           <p v-if="currentUser.bio" class="text-gray-600 mb-4">{{ currentUser.bio }}</p>
-          <p class="text-sm text-gray-500">Geburtsdatum: {{ formatDate(currentUser.birth_date) }}</p>
+          <p v-if="currentUser.zodiac_sign_name" class="text-sm text-gray-500">
+            Sternzeichen: <span class="font-semibold">{{ currentUser.zodiac_sign_name }}</span>
+          </p>
         </div>
 
         <!-- Like/Dislike Buttons -->
         <div class="p-6 flex gap-4">
           <button @click="handleDislike"
-                  class="flex-1 px-6 py-3 font-semibold text-white bg-red-600 rounded-lg hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500">
-            ❌ Dislike
+                  class="flex-1 px-6 py-3 font-bold text-white bg-red-600 rounded-lg hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 flex items-center justify-center gap-2">
+            <span class="text-2xl">✕</span>
+            <span>Dislike</span>
           </button>
           <button @click="handleLike"
                   class="flex-1 px-6 py-3 font-semibold text-white bg-green-600 rounded-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500">
@@ -92,10 +101,19 @@ const loadCompatibleUser = async () => {
 
 /**
  * Behandelt den Like-Button Klick
- * Einfach einen neuen kompatiblen Benutzer laden
+ * Speichert den Like in der Datenbank und lädt einen neuen kompatiblen Benutzer
  */
 const handleLike = async () => {
-  await loadCompatibleUser()
+  if (currentUser.value) {
+    try {
+      await userService.likeUser(currentUser.value.id)
+      // Lade einen neuen kompatiblen Benutzer nach dem Like
+      await loadCompatibleUser()
+    } catch (err: any) {
+      error.value = err.response?.data?.detail || 'Fehler beim Liken des Benutzers'
+      console.error(err)
+    }
+  }
 }
 
 /**

@@ -18,4 +18,5 @@ export interface UserRead {
   bio: string | null;
   image_filename: string | null;
   zodiac_sign_id: number | null;
+  zodiac_sign_name: string | null;
 }
