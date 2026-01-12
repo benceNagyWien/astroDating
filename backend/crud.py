@@ -1,44 +1,52 @@
-# This file was reconstructed by the Gemini CLI.
-# It contains the essential CRUD (Create, Read, Update, Delete) operations.
-
 from sqlmodel import Session, select
-from typing import Optional
-from datetime import date
+from datetime import date, datetime
+import random
+from typing import List, Optional
 
-# Import models and security functions from other modules in the application
-from models import User, UserCreate, ZodiacSign
+# Corrected absolute imports
+from models import User, UserCreate, ZodiacSign, ZodiacCompatibility, Match
 from security import get_password_hash
 
-
-def get_user(db: Session, user_id: int) -> Optional[User]:
-    """
-    Retrieves a single user from the database by their ID.
-    """
-    return db.get(User, user_id)
-
+# --- User Functions ---
 
 def get_user_by_email(db: Session, email: str) -> Optional[User]:
-    """
-    Retrieves a single user from the database by their email address.
-    """
+    """Fetches a user by their email address."""
     statement = select(User).where(User.email == email)
     return db.exec(statement).first()
 
+def get_users(db: Session, skip: int = 0, limit: int = 100) -> List[User]:
+    """Retrieves a list of users with pagination."""
+    statement = select(User).offset(skip).limit(limit)
+    return db.exec(statement).all()
 
-def get_zodiac_sign_by_date(db: Session, birth_date: date) -> Optional[ZodiacSign]:
+def create_user(db: Session, user: UserCreate, all_signs: List[ZodiacSign]) -> User:
+    """Creates a new user, efficiently determining the zodiac sign from a pre-fetched list."""
+    hashed_password = get_password_hash(user.password)
+    zodiac_sign = determine_zodiac_sign_for_date(user.birth_date, all_signs)
+    
+    db_user = User(
+        **user.model_dump(exclude={"password"}),
+        hashed_password=hashed_password,
+        zodiac_sign_id=zodiac_sign.id if zodiac_sign else None
+    )
+    
+    db.add(db_user)
+    db.commit()
+    db.refresh(db_user)
+    return db_user
+
+# --- Zodiac & Compatibility Functions ---
+
+def determine_zodiac_sign_for_date(birth_date: date, signs: List[ZodiacSign]) -> Optional[ZodiacSign]:
     """
-    Determines the Western Zodiac sign for a given birth date.
-    This function handles signs that span across the new year (e.g., Capricorn).
+    (Pure function) Determines the Western Zodiac sign for a birth date from a list of signs.
     """
-    signs = db.exec(select(ZodiacSign)).all()
     for sign in signs:
-        # Case 1: The sign's date range is within the same year (e.g., Aries: Mar 21 - Apr 19)
         if sign.start_month <= sign.end_month:
             if (birth_date.month == sign.start_month and birth_date.day >= sign.start_day) or \
                (birth_date.month == sign.end_month and birth_date.day <= sign.end_day) or \
                (sign.start_month < birth_date.month < sign.end_month):
                 return sign
-        # Case 2: The sign's date range crosses over the new year (e.g., Capricorn: Dec 22 - Jan 19)
         else:
             if (birth_date.month == sign.start_month and birth_date.day >= sign.start_day) or \
                (birth_date.month > sign.start_month) or \
@@ -47,31 +55,65 @@ def get_zodiac_sign_by_date(db: Session, birth_date: date) -> Optional[ZodiacSig
                 return sign
     return None
 
+def get_compatible_user(db: Session, current_user: User) -> Optional[User]:
+    """
+    Finds a random, compatible user who the current user has not yet swiped on.
+    """
+    if not current_user or not current_user.zodiac_sign_id:
+        return None
 
-def create_user(db: Session, user: UserCreate) -> User:
-    """
-    Creates a new user in the database.
-    - Hashes the plain-text password.
-    - Determines the user's zodiac sign based on their birth date.
-    - Saves the new user record.
-    """
-    # Hash the user's password for security
-    hashed_password = get_password_hash(user.password)
+    compatible_sign_ids_query = select(ZodiacCompatibility.sign_2_id).where(
+        ZodiacCompatibility.sign_1_id == current_user.zodiac_sign_id
+    )
+    compatible_sign_ids = set(db.exec(compatible_sign_ids_query).all())
+    if not compatible_sign_ids:
+        return None
+
+    swiped_user_ids_query = select(Match.user_id_to).where(Match.user_id_from == current_user.id)
+    swiped_user_ids = set(db.exec(swiped_user_ids_query).all())
+    swiped_user_ids.add(current_user.id)
+
+    candidates = db.exec(
+        select(User).where(
+            User.zodiac_sign_id.in_(compatible_sign_ids), # type: ignore
+            User.id.not_in(swiped_user_ids) # type: ignore
+        )
+    ).all()
     
-    # Exclude the plain-text password and create a dictionary for the new user
-    user_data = user.model_dump(exclude={"password"})
-    
-    # Find the corresponding zodiac sign
-    zodiac_sign = get_zodiac_sign_by_date(db, user.birth_date)
-    
-    # Create the new User object
-    db_user = User(**user_data, hashed_password=hashed_password, zodiac_sign=zodiac_sign)
-    
-    # Add the new user to the database session
-    db.add(db_user)
-    # Commit the changes to the database
+    return random.choice(candidates) if candidates else None
+
+# --- Match (Like/Swipe) Functions ---
+
+def create_match(db: Session, user_id_from: int, user_id_to: int, is_like: bool) -> Match:
+    """Creates a new Match record in the database."""
+    existing_match = db.exec(
+        select(Match).where(Match.user_id_from == user_id_from, Match.user_id_to == user_id_to)
+    ).first()
+    if existing_match:
+        return existing_match
+
+    match = Match(user_id_from=user_id_from, user_id_to=user_id_to, is_like=is_like)
+    db.add(match)
     db.commit()
-    # Refresh the object to get the newly created ID and other defaults
-    db.refresh(db_user)
-    
-    return db_user
+    db.refresh(match)
+    return match
+
+def get_users_who_liked_me(db: Session, current_user_id: int) -> List[User]:
+    """Returns a list of users who have liked the current user."""
+    user_ids = db.exec(
+        select(Match.user_id_from).where(Match.user_id_to == current_user_id, Match.is_like == True)
+    ).all()
+    if not user_ids:
+        return []
+        
+    return db.exec(select(User).where(User.id.in_(user_ids))).all() # type: ignore
+
+def get_users_i_liked(db: Session, current_user_id: int) -> List[User]:
+    """Returns a list of users that the current user has liked."""
+    user_ids = db.exec(
+        select(Match.user_id_to).where(Match.user_id_from == current_user_id, Match.is_like == True)
+    ).all()
+    if not user_ids:
+        return []
+
+    return db.exec(select(User).where(User.id.in_(user_ids))).all() # type: ignore
