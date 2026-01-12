@@ -56,12 +56,12 @@ def seed_zodiac_signs():
 
 def seed_zodiac_compatibility():
     """
-    Füllt die ZodiacCompatibility-Tabelle mit den Kompatibilitätsdaten.
+    Füllt die ZodiacCompatibility-Tabelle mit den Kompatibilitätsdaten unter Verwendung von Fremdschlüsseln.
     Die Tabelle wird bei jedem Start geleert und neu gefüllt, um Konsistenz zu gewährleisten.
     Jede Kompatibilität wird in beide Richtungen gespeichert (bidirektional).
     """
     with Session(engine) as session:
-        # Lösche alle vorhandenen Kompatibilitätseinträge
+        # 1. Vorhandene Einträge löschen
         existing_entries = session.exec(select(ZodiacCompatibility)).all()
         if existing_entries:
             print("Lösche vorhandene Kompatibilitätseinträge...")
@@ -70,8 +70,16 @@ def seed_zodiac_compatibility():
             session.commit()
         
         print("Fülle die ZodiacCompatibility-Tabelle mit den Kompatibilitätsdaten...")
-        
-        # Kompatibilitätsdaten: jedes Sternzeichen mit seinen kompatiblen Partnern
+
+        # 2. Alle Sternzeichen abrufen, um eine Namens-zu-ID-Zuordnung zu erstellen
+        all_signs = session.exec(select(ZodiacSign)).all()
+        if not all_signs:
+            print("Warnung: ZodiacSign-Tabelle ist leer. Überspringe das Seeding der Kompatibilität.")
+            return
+            
+        signs_by_german_name = {sign.german_name: sign.id for sign in all_signs}
+
+        # 3. Kompatibilitätsdaten basierend auf deutschen Namen
         compatibility_data = {
             "Widder": ["Löwe", "Schütze", "Zwillinge", "Waage", "Wassermann"],
             "Stier": ["Jungfrau", "Steinbock", "Krebs", "Skorpion", "Fische"],
@@ -87,19 +95,24 @@ def seed_zodiac_compatibility():
             "Fische": ["Krebs", "Skorpion", "Stier", "Jungfrau", "Steinbock"],
         }
         
-        # Erstellt Kompatibilitätseinträge in beide Richtungen
+        # 4. Kompatibilitätseinträge mit IDs erstellen
         compatibility_entries = []
-        seen_pairs = set()  # Verhindert Duplikate
-        
-        for sign_1, compatible_signs in compatibility_data.items():
-            for sign_2 in compatible_signs:
-                # Erstellt ein sortiertes Paar, um Duplikate zu vermeiden
-                pair = tuple(sorted([sign_1, sign_2]))
-                if pair not in seen_pairs and sign_1 != sign_2:
+        seen_pairs = set()
+
+        for sign_1_name, compatible_signs_names in compatibility_data.items():
+            for sign_2_name in compatible_signs_names:
+                sign_1_id = signs_by_german_name.get(sign_1_name)
+                sign_2_id = signs_by_german_name.get(sign_2_name)
+
+                if sign_1_id is None or sign_2_id is None:
+                    continue
+
+                pair = tuple(sorted((sign_1_id, sign_2_id)))
+                if pair not in seen_pairs:
                     seen_pairs.add(pair)
-                    # Fügt beide Richtungen hinzu (sign_1 -> sign_2 und sign_2 -> sign_1)
-                    compatibility_entries.append(ZodiacCompatibility(sign_1=sign_1, sign_2=sign_2))
-                    compatibility_entries.append(ZodiacCompatibility(sign_1=sign_2, sign_2=sign_1))
+                    # Fügt beide Richtungen hinzu, um die Abfrage zu vereinfachen
+                    compatibility_entries.append(ZodiacCompatibility(sign_1_id=sign_1_id, sign_2_id=sign_2_id))
+                    compatibility_entries.append(ZodiacCompatibility(sign_1_id=sign_2_id, sign_2_id=sign_1_id))
         
         session.add_all(compatibility_entries)
         session.commit()

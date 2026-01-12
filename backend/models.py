@@ -54,11 +54,11 @@ class User(UserBase, table=True):
 class ZodiacCompatibility(SQLModel, table=True):
     """
     Eine statische Nachschlagetabelle, die definiert, welche Sternzeichen kompatibel sind.
-    z.B. sign_1: 'Aries', sign_2: 'Leo'
+    Verwendet Fremdschlüssel zur `ZodiacSign`-Tabelle für Datenintegrität.
     """
     id: Optional[int] = Field(default=None, primary_key=True)
-    sign_1: str = Field(index=True, nullable=False)
-    sign_2: str = Field(index=True, nullable=False)
+    sign_1_id: int = Field(foreign_key="zodiacsign.id", index=True, nullable=False)
+    sign_2_id: int = Field(foreign_key="zodiacsign.id", index=True, nullable=False)
 
 class Match(SQLModel, table=True):
     """
