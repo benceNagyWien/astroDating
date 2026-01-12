@@ -1,8 +1,8 @@
 from sqlmodel import Session, select
 from datetime import date
 
-from backend.models import User, UserCreate, ZodiacSign
-from backend.security import get_password_hash
+from models import User, UserCreate, ZodiacSign
+from security import get_password_hash
 
 # English comments are used in the code as requested.
 

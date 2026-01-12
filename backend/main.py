@@ -3,8 +3,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 
 # Importiere die Funktionen und Router
-from .database import create_db_and_tables, seed_zodiac_signs, seed_zodiac_compatibility
-from .routers import auth, users
+from database import create_db_and_tables, seed_zodiac_signs, seed_zodiac_compatibility
+from routers import auth, users
 
 # NOTE: Comments are in German as per DEVELOPMENT_GUIDELINES.md
 
