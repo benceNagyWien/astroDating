@@ -1,29 +1,49 @@
+import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
+from sqlmodel import Session
 
-# Importiere die Funktionen und Router
-from database import create_db_and_tables, seed_zodiac_signs, seed_zodiac_compatibility
+# Importiere die notwendigen Funktionen und Router
+from database import engine, create_db_and_tables, seed_zodiac_signs, seed_zodiac_compatibility
 from routers import auth, users
+from seed import create_fake_users # Importiere die User-Seeding Funktion
 
 # NOTE: Comments are in German as per DEVELOPMENT_GUIDELINES.md
+DB_FILE = "./astrodate.db"
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
     """
     Diese Funktion wird beim Starten der FastAPI Anwendung ausgeführt.
-    Hier rufen wir die Funktionen zum Erstellen der Datenbanktabellen
-    und zum Füllen der statischen Daten auf.
+    Bei jedem Start wird die alte Datenbank gelöscht und eine neue,
+    mit Testdaten gefüllte Datenbank erstellt.
     
     Args:
         _app: FastAPI Anwendungsinstanz (wird nicht verwendet, aber von FastAPI erwartet)
     """
-    print("Starte Anwendung und erstelle Datenbanktabellen...")
+    print("================ INITIALISIERE ENTWICKLUNGS-DATENBANK ================")
+    
+    # 1. Alte Datenbankdatei löschen
+    if os.path.exists(DB_FILE):
+        print(f"Lösche alte Datenbank: {DB_FILE}")
+        os.remove(DB_FILE)
+    
+    # 2. Datenbank und Tabellen neu erstellen
+    print("Erstelle neue Datenbank und Tabellen...")
     create_db_and_tables()
-    print("Fülle statische Daten (Tierkreiszeichen)...")
+    
+    # 3. Statische Daten füllen
+    print("Fülle statische Daten (Tierkreiszeichen und Kompatibilität)...")
     seed_zodiac_signs()
-    print("Fülle Kompatibilitätsdaten...")
     seed_zodiac_compatibility()
+    
+    # 4. Test-Benutzerdaten füllen (Seeding)
+    print("Fülle Benutzerdaten (Seeding)...")
+    with Session(engine) as session:
+        create_fake_users(session)
+    
+    print("================== DATENBANK-INITIALISIERUNG FERTIG ==================")
     yield
     print("Anwendung heruntergefahren.")
 
