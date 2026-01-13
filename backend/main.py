@@ -17,34 +17,34 @@ DB_FILE = "./astrodate.db"
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
     """
-    Diese Funktion wird beim Starten der FastAPI Anwendung ausgeführt.
-    Bei jedem Start wird die alte Datenbank gelöscht und eine neue,
-    mit Testdaten gefüllte Datenbank erstellt.
+    Handles application startup.
+    If the database does not exist, it creates it and seeds it with initial data.
+    If the database already exists, it uses the existing one.
     """
-    print("================ INITIALISIERE ENTWICKLUNGS-DATENBANK ================")
-    
-    # 1. Alte Datenbankdatei löschen
-    if os.path.exists(DB_FILE):
-        print(f"Lösche alte Datenbank: {DB_FILE}")
-        os.remove(DB_FILE)
-    
-    # 2. Datenbank und Tabellen neu erstellen
-    print("Erstelle neue Datenbank und Tabellen...")
-    create_db_and_tables()
-    
-    # 3. Statische Daten füllen
-    print("Fülle statische Daten (Tierkreiszeichen und Kompatibilität)...")
-    seed_zodiac_signs()
-    seed_zodiac_compatibility()
-    
-    # 4. Test-Benutzerdaten füllen (Seeding)
-    print("Fülle Benutzerdaten (Seeding)...")
-    with Session(engine) as session:
-        all_zodiac_signs = session.exec(select(ZodiacSign)).all()
-        create_fake_users(session, all_zodiac_signs)
-        create_specific_test_users(session, all_zodiac_signs)
-    
-    print("================== DATENBANK-INITIALISIERUNG FERTIG ==================")
+    print("================== Anwendung startet ==================")
+    if not os.path.exists(DB_FILE):
+        print("Datenbank nicht gefunden. Initialisiere neue Datenbank...")
+        
+        # 1. Datenbank und Tabellen erstellen
+        print("Erstelle Datenbank und Tabellen...")
+        create_db_and_tables()
+        
+        # 2. Statische Daten füllen
+        print("Fülle statische Daten (Tierkreiszeichen und Kompatibilität)...")
+        seed_zodiac_signs()
+        seed_zodiac_compatibility()
+        
+        # 3. Test-Benutzerdaten füllen (Seeding)
+        print("Fülle Benutzerdaten (Seeding)...")
+        with Session(engine) as session:
+            all_zodiac_signs = session.exec(select(ZodiacSign)).all()
+            create_fake_users(session, all_zodiac_signs)
+            create_specific_test_users(session, all_zodiac_signs)
+        
+        print("================== DATENBANK-INITIALISIERUNG FERTIG ==================")
+    else:
+        print(f"Verwende existierende Datenbank: {DB_FILE}")
+        
     yield
     print("Anwendung heruntergefahren.")
 
