@@ -3,8 +3,8 @@ import type { UserRead } from './types';
 
 class UserService {
   /**
-   * Ruft einen kompatiblen Benutzer vom Backend ab.
-   * Erfordert Authentifizierung via Bearer Token.
+   * Fetches a compatible user from the backend.
+   * Requires authentication via Bearer token.
    */
   async discoverCompatibleUser(): Promise<UserRead> {
     try {
@@ -17,46 +17,48 @@ class UserService {
   }
 
   /**
-   * Like-olt einen Benutzer.
-   * Erfordert Authentifizierung via Bearer Token.
+   * Records a swipe action (like or dislike) for a user.
+   * Requires authentication via Bearer token.
+   * @param userId The ID of the user being swiped on.
+   * @param isLike A boolean indicating if it's a like (true) or dislike (false).
    */
-  async likeUser(userId: number): Promise<void> {
+  async swipeUser(userId: number, isLike: boolean): Promise<{ message: string; match_id?: number }> {
     try {
-      await apiClient.post(`/users/like/${userId}`);
+      const response = await apiClient.post(`/users/swipe/${userId}/${isLike}`);
+      return response.data;
     } catch (error) {
-      console.error("Error during like:", error);
+      console.error("Error during swipe:", error);
       throw error;
     }
   }
 
   /**
-   * Ruft eine Liste von Benutzern ab, die den aktuellen Benutzer geliked haben.
-   * Erfordert Authentifizierung via Bearer Token.
+   * Fetches a list of users who liked the current user.
+   * Requires authentication via Bearer token.
    */
   async getUsersWhoLikedMe(): Promise<UserRead[]> {
     try {
       const response = await apiClient.get<UserRead[]>('/users/likes');
       return response.data;
     } catch (error) {
-      console.error("Error during get likes:", error);
+      console.error("Error fetching users who liked me:", error);
       throw error;
     }
   }
 
   /**
-   * Ruft eine Liste von Benutzern ab, die der aktuelle Benutzer geliked hat.
-   * Erfordert Authentifizierung via Bearer Token.
+   * Fetches a list of users the current user has liked.
+   * Requires authentication via Bearer token.
    */
   async getMyLikes(): Promise<UserRead[]> {
     try {
       const response = await apiClient.get<UserRead[]>('/users/my-likes');
       return response.data;
     } catch (error) {
-      console.error("Error during get my likes:", error);
+      console.error("Error fetching my likes:", error);
       throw error;
     }
   }
 }
 
 export default new UserService();
-

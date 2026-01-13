@@ -106,23 +106,33 @@ const loadCompatibleUser = async () => {
 const handleLike = async () => {
   if (currentUser.value) {
     try {
-      await userService.likeUser(currentUser.value.id)
+      const response = await userService.swipeUser(currentUser.value.id, true);
+      console.log(response.message); // Optional: Log success or mutual match message
       // Lade einen neuen kompatiblen Benutzer nach dem Like
-      await loadCompatibleUser()
+      await loadCompatibleUser();
     } catch (err: any) {
-      error.value = err.response?.data?.detail || 'Fehler beim Liken des Benutzers'
-      console.error(err)
+      error.value = err.response?.data?.detail || 'Fehler beim Liken des Benutzers';
+      console.error(err);
     }
   }
-}
+};
 
 /**
  * Behandelt den Dislike-Button Klick
- * Einfach einen neuen kompatiblen Benutzer laden
+ * Speichert den Dislike und lädt einen neuen kompatiblen Benutzer
  */
 const handleDislike = async () => {
-  await loadCompatibleUser()
-}
+  if (currentUser.value) {
+    try {
+      await userService.swipeUser(currentUser.value.id, false);
+      // Lade einen neuen kompatiblen Benutzer nach dem Dislike
+      await loadCompatibleUser();
+    } catch (err: any) {
+      error.value = err.response?.data?.detail || 'Fehler beim Disliken des Benutzers';
+      console.error(err);
+    }
+  }
+};
 
 /**
  * Gibt die URL für das Profilbild zurück
