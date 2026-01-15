@@ -1,5 +1,11 @@
 # AstroDating
 
+## Group Members:
+- Bence Nagy
+- Emanuel Topic
+- Alexander Brunner
+- Simon Scheikl
+
 ## How to run the project
 
 The startup script has been removed. Please start the frontend and backend separately.
